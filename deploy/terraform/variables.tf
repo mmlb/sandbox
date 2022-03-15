@@ -31,3 +31,9 @@ variable "ssh_private_key" {
   description = "ssh private key file to use"
   default     = "~/.ssh/id_rsa"
 }
+
+variable "hostname_prefix" {
+  description = "Prefix to prepend to hostname of provisioned machines"
+  type        = string
+  default     = "tink"
+}

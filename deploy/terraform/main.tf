@@ -20,7 +20,7 @@ provider "metal" {
   auth_token = var.metal_api_token
 }
 
-# Create a new VLAN in datacenter "ewr1"
+# Create a new VLAN in datacenter
 resource "metal_vlan" "provisioning_vlan" {
   description = "provisioning_vlan"
   facility    = var.facility
@@ -29,7 +29,7 @@ resource "metal_vlan" "provisioning_vlan" {
 
 # Create a device and add it to tf_project_1
 resource "metal_device" "tink_worker" {
-  hostname         = "tink-worker"
+  hostname         = "${var.hostname_prefix}-worker"
   plan             = var.device_type
   facilities       = [var.facility]
   operating_system = "custom_ipxe"
@@ -56,7 +56,7 @@ resource "metal_port_vlan_attachment" "worker" {
 
 # Create a device and add it to tf_project_1
 resource "metal_device" "tink_provisioner" {
-  hostname         = "tink-provisioner"
+  hostname         = "${var.hostname_prefix}-provisioner"
   plan             = var.device_type
   facilities       = [var.facility]
   operating_system = "ubuntu_20_04"
@@ -101,9 +101,15 @@ resource "null_resource" "setup" {
 
   provisioner "remote-exec" {
     inline = [
-      "cd /root && tar zxvf /root/compose.tar.gz -C /root/sandbox",
-      "cd /root/sandbox/compose && TINKERBELL_CLIENT_MAC=${metal_device.tink_worker.ports[1].mac} TINKERBELL_TEMPLATE_MANIFEST=/create-tink-records/manifests/template/ubuntu-equinix-metal.yaml TINKERBELL_HARDWARE_MANIFEST=/create-tink-records/manifests/hardware/hardware-equinix-metal.json docker-compose up -d",
-      "cd /root/sandbox/compose && bash generate-tls-certs/trust.sh ${metal_device.tink_provisioner.network[0].address}",
+      "echo '===== waiting for userdata script to be done ====='",
+      "until [ -f /root/setup.sh-is-done ]; do sleep 1; echo -n '.'; done",
+      "echo '===== uncompressing compose tarball ====='",
+      "tar zxvf /root/compose.tar.gz -C /root/sandbox",
+      "echo '===== bringing up docker-compose stack ====='",
+      "echo TINKERBELL_CLIENT_MAC=${local.worker_macs[0]} >>/root/sandbox/compose/.env",
+      "echo TINKERBELL_TEMPLATE_MANIFEST=/manifests/template/ubuntu-equinix-metal.yaml >>/root/sandbox/compose/.env",
+      "echo TINKERBELL_HARDWARE_MANIFEST=/manifests/hardware/hardware-equinix-metal.json >>/root/sandbox/compose/.env",
+      "docker-compose -f /root/sandbox/compose/docker-compose.yml up -d"
     ]
   }
 }

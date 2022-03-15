@@ -3,7 +3,7 @@
   "metadata": {
     "facility": {
       "facility_code": "onprem",
-      "plan_slug": "c2.medium.x86",
+      "plan_slug": "c3.small.x86",
       "plan_version_slug": ""
     },
     "instance": {},
